@@ -1,8 +1,9 @@
+import json
 from typing import Optional
 from uuid import UUID
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.celery_app import celery_app
@@ -189,6 +190,86 @@ def start_processing(
         "review_id": str(review.id),
         "status": review.status.value,
         "job_id": async_result.id,
+    }
+
+
+@router.post("/submit")
+def submit_review(
+    file: UploadFile | None = File(None),
+    context_json: str | None = Form(None),
+    company_role: str | None = Form(None),
+    region: str | None = Form(None),
+    vendor_type: str | None = Form(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    if file is None:
+        raise HTTPException(status_code=400, detail="Missing file")
+
+    if context_json:
+        try:
+            parsed = json.loads(context_json)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="Invalid context_json") from exc
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=400, detail="Invalid context_json")
+        payload = parsed
+    else:
+        if not company_role or not region:
+            raise HTTPException(status_code=400, detail="Missing context fields")
+        payload = {
+            "company_role": company_role,
+            "region": region,
+            "vendor_type": vendor_type or None,
+        }
+
+    review = Review(status=ReviewStatus.CREATED, context_json=payload)
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    try:
+        data = file.file.read()
+        updated = upload_review_document(
+            db=db,
+            review=review,
+            content_type=file.content_type or "",
+            filename=file.filename or "file",
+            data=data,
+        )
+    except InvalidStatusTransition as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except UnsupportedFileType as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    finally:
+        file.file.close()
+
+    try:
+        assert_transition(updated.status, ReviewStatus.PROCESSING)
+        updated.status = ReviewStatus.PROCESSING
+        db.add(updated)
+        db.commit()
+        db.refresh(updated)
+
+        async_result = process_review_task.delay(str(updated.id))
+        updated.job_id = async_result.id
+        updated.job_status = getattr(async_result, "status", None) or "PENDING"
+        db.add(updated)
+        db.commit()
+    except Exception as exc:
+        try:
+            assert_transition(updated.status, ReviewStatus.FAILED)
+            updated.status = ReviewStatus.FAILED
+        except InvalidStatusTransition:
+            pass
+        updated.error_message = str(exc)
+        db.add(updated)
+        db.commit()
+        raise HTTPException(status_code=503, detail="Failed to enqueue job") from exc
+
+    return {
+        "review_id": str(updated.id),
+        "job_id": updated.job_id,
+        "status": "processing",
     }
 
 
