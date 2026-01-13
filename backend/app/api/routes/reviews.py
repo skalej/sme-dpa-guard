@@ -115,6 +115,8 @@ def _build_explain_payload(review_id: UUID, db: Session) -> ReviewExplainOut:
         review_id=str(review.id),
         status=review.status.value,
         playbook_version=get_playbook_version(),
+        decision=review.decision,
+        summary=review.summary_json,
         evaluations=evaluation_out,
     )
 

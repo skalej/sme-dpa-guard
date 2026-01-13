@@ -18,6 +18,7 @@ from app.playbook.rules import get_rules_for_clause_type
 from app.services.evidence import validate_evidence_spans
 from app.services.evaluation import evaluate_clause, evaluate_missing_clause
 from app.services.extraction import extract_document
+from app.services.summary import build_executive_summary
 from app.services.classification import classify_segment
 from app.services.segmentation import segment_document
 from app.storage.minio import get_storage_client
@@ -131,6 +132,20 @@ def process_review(review_id: UUID) -> None:
             db.commit()
 
         if review.status == ReviewStatus.PROCESSING:
+            stored_evals = (
+                db.execute(
+                    select(ClauseEvaluation).where(ClauseEvaluation.review_id == review.id)
+                )
+                .scalars()
+                .all()
+            )
+            if stored_evals:
+                decision, summary_json = build_executive_summary(stored_evals)
+                review.decision = decision
+                review.summary_json = summary_json
+                db.add(review)
+                db.commit()
+
             actual = db.execute(
                 select(func.count(ClauseEvaluation.id)).where(
                     ClauseEvaluation.review_id == review.id

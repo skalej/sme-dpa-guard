@@ -39,6 +39,8 @@ class ReviewExplainOut(BaseModel):
     review_id: str
     status: str
     playbook_version: str
+    decision: str | None = None
+    summary: dict | None = None
     evaluations: list[ClauseEvaluationOut]
 
 
