@@ -1,5 +1,179 @@
-const UploadView = () => {
-  return <div>UploadView</div>;
+import { useState } from "react";
+
+import { createReview, startReview, uploadReviewDoc } from "../api.js";
+import {
+  isAllowedFileSize,
+  isAllowedFileType,
+  MAX_FILE_SIZE_BYTES,
+} from "../utils/helpers.js";
+
+const ROLE_OPTIONS = ["controller", "processor"];
+const REGION_OPTIONS = ["EU", "UK", "US", "Other"];
+const VENDOR_OPTIONS = ["SaaS", "Cloud", "Marketing", "HR", "Payments", "Other"];
+
+const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVendorType = "" }) => {
+  const [file, setFile] = useState(null);
+  const [role, setRole] = useState(defaultRole);
+  const [region, setRegion] = useState(defaultRegion);
+  const [vendorType, setVendorType] = useState(defaultVendorType);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (!file) {
+      setError("Please select a PDF or DOCX file.");
+      return;
+    }
+    if (!isAllowedFileType(file)) {
+      setError("Unsupported file type. Please upload PDF or DOCX.");
+      return;
+    }
+    if (!isAllowedFileSize(file)) {
+      setError("File is too large. Maximum size is 25MB.");
+      return;
+    }
+    if (!role) {
+      setError("Please select your role.");
+      return;
+    }
+    if (!region) {
+      setError("Please select the processing region.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const contextJson = {
+        company_role: role,
+        region,
+        vendor_type: vendorType || null,
+      };
+      const review = await createReview(contextJson);
+      const reviewId = review.review_id;
+      await uploadReviewDoc(reviewId, file);
+      const started = await startReview(reviewId);
+      const jobId = started.job_id;
+      if (onStarted) {
+        onStarted({ reviewId, jobId });
+      }
+    } catch (err) {
+      if (err && err.status === 415) {
+        setError("Unsupported file type. Please upload PDF or DOCX.");
+      } else if (err && err.status === 409) {
+        setError(
+          `Review is not in a state that allows upload. ${err.message || ""}`.trim()
+        );
+      } else {
+        setError(err?.message || "Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const maxSizeMb = Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024));
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold text-slate-900">
+          Upload Data Processing Agreement
+        </h2>
+        <p className="text-sm text-slate-500">PDF or DOCX up to {maxSizeMb}MB</p>
+      </div>
+
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700">
+            DPA Document
+          </label>
+          <input
+            type="file"
+            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={(event) => setFile(event.target.files?.[0] || null)}
+            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Your Role
+            </label>
+            <select
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              <option value="">Select role</option>
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Processing Region
+            </label>
+            <select
+              value={region}
+              onChange={(event) => setRegion(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+            >
+              <option value="">Select region</option>
+              {REGION_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700">
+            Vendor Type (optional)
+          </label>
+          <select
+            value={vendorType}
+            onChange={(event) => setVendorType(event.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+          >
+            <option value="">Select vendor type</option>
+            {VENDOR_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSubmitting ? "Starting review..." : "Start Review"}
+        </button>
+      </form>
+
+      <p className="text-xs text-slate-500">
+        This tool provides decision support and is not legal advice.
+      </p>
+    </div>
+  );
 };
 
 export default UploadView;
