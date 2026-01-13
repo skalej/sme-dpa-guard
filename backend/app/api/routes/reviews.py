@@ -7,8 +7,18 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.domain.errors import InvalidStatusTransition
 from app.domain.status_flow import assert_transition
+from app.models.clause_evaluation import ClauseEvaluation
 from app.models.review import Review, ReviewStatus
-from app.schemas.reviews import ReviewCreate, ReviewDoc, ReviewOut, ReviewUploadOut
+from app.playbook.rules import get_playbook_version
+from app.schemas.reviews import (
+    ClauseEvaluationOut,
+    EvidenceSpanOut,
+    ReviewCreate,
+    ReviewDoc,
+    ReviewExplainOut,
+    ReviewOut,
+    ReviewUploadOut,
+)
 from app.services.uploads import UnsupportedFileType, upload_review_document
 from app.workers.tasks import process_review
 
@@ -55,6 +65,49 @@ def get_review(review_id: UUID, db: Session = Depends(get_db)) -> ReviewOut:
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
     return _to_review_out(review)
+
+
+@router.get("/{review_id}/explain", response_model=ReviewExplainOut)
+def explain_review(review_id: UUID, db: Session = Depends(get_db)) -> ReviewExplainOut:
+    review = db.get(Review, review_id)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    evaluations = (
+        db.query(ClauseEvaluation)
+        .filter(ClauseEvaluation.review_id == review_id)
+        .order_by(ClauseEvaluation.clause_type)
+        .all()
+    )
+
+    evaluation_out = []
+    for evaluation in evaluations:
+        evidence_spans = [
+            EvidenceSpanOut(
+                segment_id=span.get("segment_id"),
+                quote=span.get("quote"),
+                page_start=span.get("page_start"),
+                page_end=span.get("page_end"),
+            )
+            for span in evaluation.evidence_spans or []
+        ]
+        evaluation_out.append(
+            ClauseEvaluationOut(
+                clause_type=evaluation.clause_type.value,
+                risk_label=evaluation.risk_label.value,
+                short_reason=evaluation.short_reason,
+                suggested_change=evaluation.suggested_change,
+                triggered_rule_ids=evaluation.triggered_rule_ids or [],
+                evidence_spans=evidence_spans,
+            )
+        )
+
+    return ReviewExplainOut(
+        review_id=str(review.id),
+        status=review.status.value,
+        playbook_version=get_playbook_version(),
+        evaluations=evaluation_out,
+    )
 
 
 @router.post("/{review_id}/upload", response_model=ReviewUploadOut)

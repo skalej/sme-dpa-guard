@@ -19,6 +19,29 @@ class ReviewDoc(BaseModel):
     storage_key: str | None = None
 
 
+class EvidenceSpanOut(BaseModel):
+    segment_id: int
+    quote: str
+    page_start: int | None = None
+    page_end: int | None = None
+
+
+class ClauseEvaluationOut(BaseModel):
+    clause_type: str
+    risk_label: str
+    short_reason: str
+    suggested_change: str
+    triggered_rule_ids: list[str]
+    evidence_spans: list[EvidenceSpanOut]
+
+
+class ReviewExplainOut(BaseModel):
+    review_id: str
+    status: str
+    playbook_version: str
+    evaluations: list[ClauseEvaluationOut]
+
+
 class ReviewOut(BaseModel):
     review_id: UUID
     status: ReviewStatus
