@@ -67,6 +67,8 @@ services:
       APP_VERSION: 0.1.0
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/dpa_guard
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio12345
@@ -95,6 +97,8 @@ services:
       APP_VERSION: 0.1.0
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/dpa_guard
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: minio
       S3_SECRET_KEY: minio12345
@@ -110,6 +114,35 @@ services:
         condition: service_healthy
     profiles:
       - prod
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.celery_app.celery_app worker --loglevel=info
+    environment:
+      APP_ENV: dev
+      APP_NAME: dpa-guard
+      APP_VERSION: 0.1.0
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/dpa_guard
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio12345
+      S3_BUCKET: dpa-guard
+      S3_REGION: us-east-1
+      S3_SECURE: "false"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
 
 volumes:
   postgres_data:

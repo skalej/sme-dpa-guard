@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Enum as SAEnum, func
+from sqlalchemy import DateTime, Enum as SAEnum, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,6 +35,8 @@ class Review(Base):
     doc_sha256: Mapped[str | None] = mapped_column(nullable=True)
     doc_storage_key: Mapped[str | None] = mapped_column(nullable=True)
     error_message: Mapped[str | None] = mapped_column(nullable=True)
+    job_id: Mapped[str | None] = mapped_column(String(length=128), nullable=True)
+    job_status: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
     decision: Mapped[str | None] = mapped_column(nullable=True)
     summary_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

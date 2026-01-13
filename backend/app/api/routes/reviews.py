@@ -1,9 +1,11 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
+from celery.result import AsyncResult
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.celery_app import celery_app
 from app.database import get_db
 from app.domain.errors import InvalidStatusTransition
 from app.domain.status_flow import assert_transition
@@ -20,7 +22,7 @@ from app.schemas.reviews import (
     ReviewUploadOut,
 )
 from app.services.uploads import UnsupportedFileType, upload_review_document
-from app.workers.tasks import process_review
+from app.workers.celery_tasks import process_review_task
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -162,14 +164,13 @@ def upload_review_file(
 @router.post("/{review_id}/start")
 def start_processing(
     review_id: UUID,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> dict:
     review = db.get(Review, review_id)
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
     if review.status != ReviewStatus.UPLOADED:
-        raise HTTPException(status_code=409, detail="Review not ready for processing")
+        raise HTTPException(status_code=400, detail="Review not ready for processing")
 
     assert_transition(review.status, ReviewStatus.PROCESSING)
     review.status = ReviewStatus.PROCESSING
@@ -177,10 +178,38 @@ def start_processing(
     db.commit()
     db.refresh(review)
 
-    background_tasks.add_task(process_review, review_id)
+    async_result = process_review_task.delay(str(review.id))
+    review.job_id = async_result.id
+    review.job_status = getattr(async_result, "status", None) or "PENDING"
+    db.add(review)
+    db.commit()
 
     return {
         "message": "Processing started",
         "review_id": str(review.id),
         "status": review.status.value,
+        "job_id": async_result.id,
+    }
+
+
+@router.get("/{review_id}/job")
+def get_job_status(review_id: UUID, db: Session = Depends(get_db)) -> dict:
+    review = db.get(Review, review_id)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    if not review.job_id:
+        return {"review_id": str(review.id), "job_id": None, "state": None}
+
+    result = AsyncResult(review.job_id, app=celery_app)
+    review.job_status = result.state
+    db.add(review)
+    db.commit()
+
+    return {
+        "review_id": str(review.id),
+        "job_id": review.job_id,
+        "state": result.state,
+        "ready": result.ready(),
+        "successful": result.successful() if result.ready() else None,
     }

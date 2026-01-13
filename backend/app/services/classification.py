@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 
 from app.config import get_settings
 from app.models.clause_type import ClauseType
 from app.playbook.rules import get_classification_keywords
+from app.services.openai_retry import retry_with_backoff
 
 FALLBACK_CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
     ClauseType.ROLES: ["controller", "processor", "sub-processor", "subprocessor"],
@@ -73,13 +73,54 @@ def classify_segment_llm(_segment_text: str) -> list[dict]:
     settings = get_settings()
     if not settings.use_llm_classification:
         return []
-    if not os.getenv("LLM_API_KEY"):
+    if not settings.openai_api_key:
         return []
-    # LLM integration will be added later.
-    payload = os.getenv("LLM_CLASSIFICATION_RESPONSE", "")
-    if not payload:
+    prompt = build_classify_prompt(_segment_text)
+    try:
+        payload = call_llm_openai_classify(prompt)
+    except Exception:
         return []
     return _parse_llm_output(payload)
+
+
+def build_classify_prompt(segment_text: str) -> str:
+    clause_types = [clause.value for clause in ClauseType]
+    prompt = (
+        "You are a clause classifier. Return ONLY valid JSON (no markdown) as a list "
+        "of objects with keys: clause_type, confidence. clause_type must be one of "
+        f"{clause_types}. confidence is a float between 0 and 1.\n"
+        f"Clause text:\n{segment_text}"
+    )
+    return prompt
+
+
+def call_llm_openai_classify(prompt: str) -> str:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise RuntimeError("Missing OpenAI API key")
+    from openai import OpenAI
+
+    client = OpenAI(api_key=settings.openai_api_key)
+
+    def _call() -> str:
+        try:
+            response = client.responses.create(
+                model=settings.openai_model,
+                input=prompt,
+                temperature=settings.llm_temperature,
+            )
+            if hasattr(response, "output_text"):
+                return response.output_text
+        except Exception:
+            response = client.chat.completions.create(
+                model=settings.openai_model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=settings.llm_temperature,
+            )
+            return response.choices[0].message.content or ""
+        raise RuntimeError("Empty LLM response")
+
+    return retry_with_backoff(_call)
 
 
 def _parse_llm_output(payload: str) -> list[dict]:

@@ -24,9 +24,11 @@ from app.services.segmentation import segment_document
 from app.storage.minio import get_storage_client
 
 
-def process_review(review_id: UUID) -> None:
+def process_review(review_id: UUID | str) -> None:
     db: Session = SessionLocal()
     review: Review | None = None
+    if not isinstance(review_id, UUID):
+        review_id = UUID(str(review_id))
     try:
         review = db.get(Review, review_id)
         if review is None:

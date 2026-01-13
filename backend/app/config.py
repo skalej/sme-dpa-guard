@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     s3_region: str = Field("us-east-1", validation_alias="S3_REGION")
     s3_secure: bool = Field(False, validation_alias="S3_SECURE")
     redis_url: str = Field("redis://localhost:6379/0", validation_alias="REDIS_URL")
+    celery_broker_url: str = Field(
+        "redis://localhost:6379/0", validation_alias="CELERY_BROKER_URL"
+    )
+    celery_result_backend: str = Field(
+        "redis://localhost:6379/0", validation_alias="CELERY_RESULT_BACKEND"
+    )
+    celery_task_always_eager: bool = Field(
+        False, validation_alias="CELERY_TASK_ALWAYS_EAGER"
+    )
     max_file_size_mb: int = Field(25, validation_alias="MAX_FILE_SIZE_MB")
     text_density_threshold: float = Field(0.1, validation_alias="TEXT_DENSITY_THRESHOLD")
     use_llm_classification: bool = Field(False, validation_alias="USE_LLM_CLASSIFICATION")

@@ -39,7 +39,13 @@ def _clean_reviews() -> None:
 
 @pytest.fixture(autouse=True)
 def _stub_worker(monkeypatch) -> None:
-    monkeypatch.setattr("app.api.routes.reviews.process_review", lambda _id: None)
+    class _Result:
+        id = "job-1"
+
+    monkeypatch.setattr(
+        "app.api.routes.reviews.process_review_task",
+        type("Stub", (), {"delay": lambda *_args, **_kwargs: _Result()}),
+    )
 
 
 
@@ -49,7 +55,7 @@ def test_start_requires_uploaded() -> None:
 
     response = client.post(f"/reviews/{review_id}/start")
 
-    assert response.status_code == 409
+    assert response.status_code == 400
 
 
 
@@ -68,6 +74,7 @@ def test_start_transitions_to_processing() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == ReviewStatus.PROCESSING.value
+    assert response.json()["job_id"] == "job-1"
 
     get_response = client.get(f"/reviews/{review_id}")
     assert get_response.status_code == 200

@@ -5,6 +5,7 @@ import json
 from app.config import get_settings
 from app.models.clause_type import ClauseType
 from app.models.risk_label import RiskLabel
+from app.services.openai_retry import retry_with_backoff
 
 CRITICAL_MISSING_CLAUSES = {
     ClauseType.SECURITY_TOMS,
@@ -122,22 +123,26 @@ def call_llm_openai(prompt: str) -> str:
     from openai import OpenAI
 
     client = OpenAI(api_key=settings.openai_api_key)
-    try:
-        response = client.responses.create(
-            model=settings.openai_model,
-            input=prompt,
-            temperature=settings.llm_temperature,
-        )
-        if hasattr(response, "output_text"):
-            return response.output_text
-    except Exception:
-        response = client.chat.completions.create(
-            model=settings.openai_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=settings.llm_temperature,
-        )
-        return response.choices[0].message.content or ""
-    raise RuntimeError("Empty LLM response")
+
+    def _call() -> str:
+        try:
+            response = client.responses.create(
+                model=settings.openai_model,
+                input=prompt,
+                temperature=settings.llm_temperature,
+            )
+            if hasattr(response, "output_text"):
+                return response.output_text
+        except Exception:
+            response = client.chat.completions.create(
+                model=settings.openai_model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=settings.llm_temperature,
+            )
+            return response.choices[0].message.content or ""
+        raise RuntimeError("Empty LLM response")
+
+    return retry_with_backoff(_call)
 
 
 def _fallback_eval(message: str) -> dict:

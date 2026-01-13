@@ -13,3 +13,5 @@ pypdf
 python-docx
 PyYAML
 openai
+celery
+redis
