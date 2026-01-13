@@ -5,12 +5,17 @@ import os
 
 from app.config import get_settings
 from app.models.clause_type import ClauseType
+from app.playbook.rules import get_classification_keywords
 
-CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
+FALLBACK_CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
     ClauseType.ROLES: ["controller", "processor", "sub-processor", "subprocessor"],
     ClauseType.SUBJECT_DURATION: ["term", "duration", "effective date", "expiry"],
     ClauseType.PURPOSE_NATURE: ["purpose", "processing", "nature of processing"],
-    ClauseType.DATA_CATEGORIES_SUBJECTS: ["data subjects", "categories of data", "personal data"],
+    ClauseType.DATA_CATEGORIES_SUBJECTS: [
+        "data subjects",
+        "categories of data",
+        "personal data",
+    ],
     ClauseType.SECURITY_TOMS: [
         "technical and organizational measures",
         "organizational measures",
@@ -33,7 +38,11 @@ CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
 def classify_segment_rules(segment_text: str) -> list[dict]:
     normalized = segment_text.lower()
     results: list[dict] = []
-    for clause_type, keywords in CLASSIFICATION_RULES.items():
+    keywords_map = get_classification_keywords()
+    for clause_type in ClauseType:
+        keywords = keywords_map.get(clause_type) or FALLBACK_CLASSIFICATION_RULES.get(
+            clause_type, []
+        )
         if not keywords:
             continue
         score = sum(1 for keyword in keywords if keyword in normalized)

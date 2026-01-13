@@ -1,0 +1,24 @@
+playbook:
+  id: dpa-sme-standard-v1
+  version: "1.0"
+  scope: "Data Processing Agreements (GDPR Addendum)"
+  audience: "EU / Germany-based SMEs"
+  disclaimer: "Decision-support only. Not legal advice."
+
+  rules:
+    - rule_id: DPA-ROLE-01
+      clause_type: parties_and_roles
+      title: Parties & Roles
+      gdpr_references:
+        - article: "4"
+          description: "Definitions of Controller and Processor"
+        - article: "28"
+          description: "Processor obligations apply only if roles are defined"
+      requirement: Clear identification of Controller and Processor roles.
+      preferred_position: Explicit identification of Controller and Processor.
+      fallback_position: Roles defined implicitly but unambiguous.
+      red_flag: Roles missing or Processor claims independent control.
+      severity: high
+      mandatory: true
+      rationale: GDPR processor obligations depend on correct role allocation.
+      keywords: ["controller", "processor", "acting on behalf"]
