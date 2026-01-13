@@ -9,3 +9,5 @@ httpx
 alembic
 boto3
 python-multipart
+pypdf
+python-docx

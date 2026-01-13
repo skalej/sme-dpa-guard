@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     s3_bucket: str = Field("dpa-guard", validation_alias="S3_BUCKET")
     s3_region: str = Field("us-east-1", validation_alias="S3_REGION")
     s3_secure: bool = Field(False, validation_alias="S3_SECURE")
+    max_file_size_mb: int = Field(25, validation_alias="MAX_FILE_SIZE_MB")
+    text_density_threshold: float = Field(0.1, validation_alias="TEXT_DENSITY_THRESHOLD")
 
     model_config = SettingsConfigDict(
         env_file=".env",

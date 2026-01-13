@@ -38,6 +38,14 @@ class MinioStorageClient(StorageClient):
             ContentType=content_type,
         )
 
+    def get_bytes(self, key: str) -> bytes:
+        response = self._client.get_object(Bucket=self._bucket, Key=key)
+        body = response["Body"]
+        try:
+            return body.read()
+        finally:
+            body.close()
+
 
 @lru_cache
 def get_storage_client() -> StorageClient:

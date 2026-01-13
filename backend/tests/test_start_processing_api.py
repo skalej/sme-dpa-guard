@@ -35,7 +35,7 @@ def _clean_reviews() -> None:
 
 @pytest.fixture(autouse=True)
 def _stub_worker(monkeypatch) -> None:
-    monkeypatch.setattr("app.workers.tasks.process_review", lambda _id: None)
+    monkeypatch.setattr("app.api.routes.reviews.process_review", lambda _id: None)
 
 
 
