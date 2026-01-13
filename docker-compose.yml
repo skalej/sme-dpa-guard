@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: dpa_guard
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dpa_guard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ./infra/minio/init.sh:/init.sh:ro
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: dev
+      APP_NAME: dpa-guard
+      APP_VERSION: 0.1.0
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/dpa_guard
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio12345
+      S3_BUCKET: dpa-guard
+      S3_REGION: us-east-1
+      S3_SECURE: "false"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  backend-prod:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: prod
+      APP_NAME: dpa-guard
+      APP_VERSION: 0.1.0
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/dpa_guard
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio12345
+      S3_BUCKET: dpa-guard
+      S3_REGION: us-east-1
+      S3_SECURE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - prod
+
+volumes:
+  postgres_data:
+  minio_data:
