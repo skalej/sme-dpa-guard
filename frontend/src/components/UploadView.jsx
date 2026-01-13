@@ -6,6 +6,7 @@ import {
   isAllowedFileType,
   MAX_FILE_SIZE_BYTES,
 } from "../utils/helpers.js";
+import Dropzone from "./Dropzone.jsx";
 
 const ROLE_OPTIONS = ["controller", "processor"];
 const REGION_OPTIONS = ["EU", "UK", "US", "Other"];
@@ -77,45 +78,85 @@ const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVe
   const maxSizeMb = Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024));
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Upload Data Processing Agreement
-        </h2>
-        <p className="text-sm text-slate-500">PDF or DOCX up to {maxSizeMb}MB</p>
+    <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold text-slate-900">DPA Guard</h1>
+        <p className="text-base text-slate-500">
+          Fast, evidence-based DPA review for GDPR compliance
+        </p>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
-
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="rounded-2xl bg-white p-8 shadow-lg w-full">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700">
-            DPA Document
-          </label>
-          <input
-            type="file"
-            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(event) => setFile(event.target.files?.[0] || null)}
-            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-          />
+          <h2 className="text-2xl font-semibold text-slate-900">
+            Upload Data Processing Agreement
+          </h2>
+          <p className="text-sm text-slate-500">PDF or DOCX up to {maxSizeMb}MB</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              Document Upload
+            </label>
+            <Dropzone value={file} onChange={setFile} error={error} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Your Role
+              </label>
+              <select
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="">Select role</option>
+                {ROLE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Processing Region
+              </label>
+              <select
+                value={region}
+                onChange={(event) => setRegion(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                <option value="">Select region</option>
+                {REGION_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700">
-              Your Role
+              Vendor Type (optional)
             </label>
             <select
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
+              value={vendorType}
+              onChange={(event) => setVendorType(event.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
             >
-              <option value="">Select role</option>
-              {ROLE_OPTIONS.map((option) => (
+              <option value="">Select vendor type</option>
+              {VENDOR_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -123,55 +164,19 @@ const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVe
             </select>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">
-              Processing Region
-            </label>
-            <select
-              value={region}
-              onChange={(event) => setRegion(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-            >
-              <option value="">Select region</option>
-              {REGION_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700">
-            Vendor Type (optional)
-          </label>
-          <select
-            value={vendorType}
-            onChange={(event) => setVendorType(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">Select vendor type</option>
-            {VENDOR_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
+            {isSubmitting ? "Starting review..." : "Start Review"}
+          </button>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isSubmitting ? "Starting review..." : "Start Review"}
-        </button>
-      </form>
-
-      <p className="text-xs text-slate-500">
-        This tool provides decision support and is not legal advice.
-      </p>
+          <p className="text-xs text-slate-500">
+            This tool provides decision support and is not legal advice.
+          </p>
+        </form>
+      </div>
     </div>
   );
 };
