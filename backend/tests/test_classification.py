@@ -1,6 +1,7 @@
 import importlib
 from textwrap import dedent
 
+from app.config import get_settings
 from app.models.clause_type import ClauseType
 import app.playbook.rules as playbook_rules
 import app.services.classification as classification
@@ -10,6 +11,7 @@ def _reload_with_playbook(tmp_path, yaml_content: str, monkeypatch):
     path = tmp_path / "rules.yaml"
     path.write_text(dedent(yaml_content))
     monkeypatch.setenv("PLAYBOOK_YAML_PATH", str(path))
+    get_settings.cache_clear()
     importlib.reload(playbook_rules)
     importlib.reload(classification)
     return classification
@@ -23,7 +25,10 @@ def test_rules_classification_security(tmp_path, monkeypatch) -> None:
           id: test
           version: "1.0"
           rules:
-            - clause_type: governing_law
+            - rule_id: DPA-LAW-01
+              clause_type: governing_law
+              requirement: Governing law is stated.
+              severity: low
               keywords: ["governing law", "jurisdiction"]
         """,
         monkeypatch,
@@ -43,7 +48,10 @@ def test_rules_playbook_governing_law(tmp_path, monkeypatch) -> None:
           id: test
           version: "1.0"
           rules:
-            - clause_type: governing_law
+            - rule_id: DPA-LAW-01
+              clause_type: governing_law
+              requirement: Governing law is stated.
+              severity: low
               keywords: ["governing law", "jurisdiction"]
         """,
         monkeypatch,

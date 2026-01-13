@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     use_llm_classification: bool = Field(False, validation_alias="USE_LLM_CLASSIFICATION")
     classify_rules_min_conf: float = Field(0.5, validation_alias="CLASSIFY_RULES_MIN_CONF")
     classify_top_k: int = Field(3, validation_alias="CLASSIFY_TOP_K")
+    playbook_yaml_path: str = Field(
+        "playbook/rules.yaml", validation_alias="PLAYBOOK_YAML_PATH"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
