@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     playbook_yaml_path: str = Field(
         "playbook/rules.yaml", validation_alias="PLAYBOOK_YAML_PATH"
     )
+    use_llm_eval: bool = Field(False, validation_alias="USE_LLM_EVAL")
+    llm_provider: str = Field("anthropic", validation_alias="LLM_PROVIDER")
+    llm_api_key: str | None = Field(None, validation_alias="LLM_API_KEY")
+    llm_model: str | None = Field(None, validation_alias="LLM_MODEL")
+    llm_max_input_chars: int = Field(60000, validation_alias="LLM_MAX_INPUT_CHARS")
 
     model_config = SettingsConfigDict(
         env_file=".env",
