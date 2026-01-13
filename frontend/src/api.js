@@ -20,11 +20,12 @@ async function request(
   }
 
   const res = await fetch(url, fetchOptions);
+  const text = await res.text();
   let payload;
   try {
-    payload = await res.json();
+    payload = text ? JSON.parse(text) : "";
   } catch (err) {
-    payload = await res.text();
+    payload = text;
   }
 
   if (!res.ok) {

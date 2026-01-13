@@ -20,12 +20,12 @@ function App() {
       <div className="mx-auto w-full max-w-5xl">
         {step === "upload" && <UploadView onStarted={handleStarted} />}
         {step === "processing" && (
-          <div className="space-y-2">
-            <ProcessingView />
-            <p className="text-xs text-slate-500">
-              Review ID: {reviewId} {jobId ? `• Job ID: ${jobId}` : ""}
-            </p>
-          </div>
+          <ProcessingView
+            reviewId={reviewId}
+            jobId={jobId}
+            onCompleted={() => setStep("results")}
+            onBack={() => setStep("upload")}
+          />
         )}
         {step === "results" && <ResultsView />}
       </div>
