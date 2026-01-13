@@ -27,8 +27,25 @@ This repository uses Codex for incremental, test-backed changes. Follow the guid
 - LLM outputs must be strict JSON, strip fences, safe fallback on parse failure
 - No RAG unless later explicitly requested
 
+## Conventions
+- Routes: `backend/app/api/routes/`
+- Services: `backend/app/services/`
+- Models: `backend/app/models/`
+- Migrations: `backend/alembic/versions/`
+- Tests: `backend/tests/`
+
+## Adding a ClauseType
+- Update `ClauseType` enum
+- Update playbook mapping and/or rules in `playbook/rules.yaml`
+- Update classification tests and any evaluation tests
+
 ## Task discipline
 - Implement in small tasks, one PR per task
 - Prefer refactors over rewrites
 - Always add/adjust tests when adding behavior
 - Keep endpoints stable unless a task says otherwise
+
+## Verification checklist
+- `alembic upgrade head`
+- `pytest -q`
+- curl happy path: create -> upload -> start -> results
