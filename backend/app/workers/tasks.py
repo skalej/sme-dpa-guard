@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.domain.errors import InvalidStatusTransition
 from app.domain.status_flow import assert_transition
 from app.models.review import Review, ReviewStatus
+from app.models.segment import ReviewSegment
 from app.services.extraction import extract_document
+from app.services.segmentation import segment_document
 from app.storage.minio import get_storage_client
 
 
@@ -24,7 +27,30 @@ def process_review(review_id: UUID) -> None:
 
         storage = get_storage_client()
         content = storage.get_bytes(review.doc_storage_key)
-        extract_document(content, review.doc_mime)
+        extraction_result = extract_document(content, review.doc_mime)
+        segments = segment_document(
+            extraction_result.get("raw_text", ""), extraction_result.get("pages")
+        )
+        if not segments:
+            raise ValueError("No segments produced from document")
+
+        db.execute(delete(ReviewSegment).where(ReviewSegment.review_id == review.id))
+        db.add_all(
+            [
+                ReviewSegment(
+                    review_id=review.id,
+                    segment_index=segment["segment_index"],
+                    heading=segment["heading"],
+                    section_number=segment["section_number"],
+                    text=segment["text"],
+                    hash=segment["hash"],
+                    page_start=segment["page_start"],
+                    page_end=segment["page_end"],
+                )
+                for segment in segments
+            ]
+        )
+        db.commit()
         # Pipeline steps will be added in later tasks.
     except Exception as exc:
         if review is not None:
