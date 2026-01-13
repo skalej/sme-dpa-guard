@@ -7,6 +7,7 @@ from app.services import evaluation
 
 def test_eval_parses_fenced_json(monkeypatch) -> None:
     monkeypatch.setenv("USE_LLM_EVAL", "true")
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
     get_settings.cache_clear()
 
     payload = {
@@ -16,7 +17,11 @@ def test_eval_parses_fenced_json(monkeypatch) -> None:
         "candidate_quotes": ["quote"],
         "triggered_rule_ids": ["RULE-1"],
     }
-    monkeypatch.setattr(evaluation, "call_llm", lambda _prompt: f"```json\n{json.dumps(payload)}\n```")
+    monkeypatch.setattr(
+        evaluation,
+        "call_llm_openai",
+        lambda _prompt: f"```json\n{json.dumps(payload)}\n```",
+    )
 
     result = evaluation.evaluate_clause(
         ClauseType.GOVERNING_LAW,
@@ -31,9 +36,10 @@ def test_eval_parses_fenced_json(monkeypatch) -> None:
 
 def test_eval_invalid_json_fallback(monkeypatch) -> None:
     monkeypatch.setenv("USE_LLM_EVAL", "true")
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
     get_settings.cache_clear()
 
-    monkeypatch.setattr(evaluation, "call_llm", lambda _prompt: "not json")
+    monkeypatch.setattr(evaluation, "call_llm_openai", lambda _prompt: "not json")
 
     result = evaluation.evaluate_clause(
         ClauseType.GOVERNING_LAW,

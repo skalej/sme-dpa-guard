@@ -36,6 +36,39 @@ def evaluate_missing_clause(clause_type: ClauseType) -> dict:
     }
 
 
+def build_eval_prompt(
+    clause_type: ClauseType,
+    segment_texts: list[str],
+    context: dict | None,
+    playbook_rules: list[dict],
+) -> str:
+    settings = get_settings()
+    segment_blob = "\n\n---\n\n".join(segment_texts)
+    segment_blob = segment_blob[: settings.llm_max_input_chars]
+    rule_fields = [
+        {
+            "rule_id": rule.get("rule_id"),
+            "clause_type": rule.get("clause_type"),
+            "requirement": rule.get("requirement"),
+            "severity": rule.get("severity"),
+            "keywords": rule.get("keywords"),
+        }
+        for rule in playbook_rules
+    ]
+    prompt = (
+        "You are a DPA clause evaluator. Return ONLY valid JSON (no markdown) "
+        "with keys: risk_label, short_reason, suggested_change, candidate_quotes, "
+        "triggered_rule_ids. risk_label must be one of GREEN, YELLOW, RED. "
+        "candidate_quotes must be verbatim excerpts from the clause text. "
+        "triggered_rule_ids must be a subset of the provided rule_ids.\n"
+        f"Clause: {clause_type.value}\n"
+        f"Context JSON:\n{json.dumps(context or {}, indent=2)}\n"
+        f"Playbook rules:\n{json.dumps(rule_fields, indent=2)}\n"
+        f"Clause text:\n{segment_blob}"
+    )
+    return prompt
+
+
 def _strip_fences(payload: str) -> str:
     stripped = payload.strip()
     if stripped.startswith("```"):
@@ -48,39 +81,70 @@ def _strip_fences(payload: str) -> str:
     return stripped
 
 
-def _parse_eval_json(payload: str) -> dict | None:
+def _parse_eval_json(payload: str) -> dict:
     cleaned = _strip_fences(payload)
     try:
         data = json.loads(cleaned)
-    except json.JSONDecodeError:
-        return None
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid JSON") from exc
     if not isinstance(data, dict):
-        return None
-    required = {"risk_label", "short_reason", "suggested_change", "candidate_quotes", "triggered_rule_ids"}
+        raise ValueError("Invalid payload")
+    required = {
+        "risk_label",
+        "short_reason",
+        "suggested_change",
+        "candidate_quotes",
+        "triggered_rule_ids",
+    }
     if not required.issubset(data.keys()):
-        return None
+        raise ValueError("Missing keys")
     if data["risk_label"] not in {label.value for label in RiskLabel}:
-        return None
+        raise ValueError("Invalid risk_label")
+    if not isinstance(data["short_reason"], str):
+        raise ValueError("Invalid short_reason")
+    if not isinstance(data["suggested_change"], str):
+        raise ValueError("Invalid suggested_change")
     if not isinstance(data["candidate_quotes"], list) or not all(
         isinstance(item, str) for item in data["candidate_quotes"]
     ):
-        return None
+        raise ValueError("Invalid candidate_quotes")
     if not isinstance(data["triggered_rule_ids"], list) or not all(
         isinstance(item, str) for item in data["triggered_rule_ids"]
     ):
-        return None
+        raise ValueError("Invalid triggered_rule_ids")
     return data
 
 
-def call_llm(_prompt: str) -> str:
-    raise RuntimeError("LLM provider not configured")
+def call_llm_openai(prompt: str) -> str:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise RuntimeError("Missing OpenAI API key")
+    from openai import OpenAI
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    try:
+        response = client.responses.create(
+            model=settings.openai_model,
+            input=prompt,
+            temperature=settings.llm_temperature,
+        )
+        if hasattr(response, "output_text"):
+            return response.output_text
+    except Exception:
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=settings.llm_temperature,
+        )
+        return response.choices[0].message.content or ""
+    raise RuntimeError("Empty LLM response")
 
 
 def _fallback_eval(message: str) -> dict:
     return {
         "risk_label": RiskLabel.YELLOW.value,
         "short_reason": message,
-        "suggested_change": "Evaluation not available.",
+        "suggested_change": "Manual review recommended.",
         "candidate_quotes": [],
         "triggered_rule_ids": [],
     }
@@ -94,19 +158,17 @@ def evaluate_clause(
 ) -> dict:
     settings = get_settings()
     if not settings.use_llm_eval:
-        return _fallback_eval("LLM disabled")
+        return {
+            "risk_label": RiskLabel.YELLOW.value,
+            "short_reason": "LLM disabled; no automated evaluation performed.",
+            "suggested_change": "Enable LLM or review manually.",
+            "candidate_quotes": [],
+            "triggered_rule_ids": [],
+        }
 
-    prompt = (
-        f"Clause: {clause_type.value}\\n"
-        f"Rules: {json.dumps(playbook_rules)}\\n"
-        f"Context: {json.dumps(context or {})}\\n"
-        f"Segments: {json.dumps(segment_texts)[: settings.llm_max_input_chars]}"
-    )
+    prompt = build_eval_prompt(clause_type, segment_texts, context, playbook_rules)
     try:
-        response = call_llm(prompt)
-        parsed = _parse_eval_json(response)
-        if parsed is None:
-            return _fallback_eval("Evaluation unavailable")
-        return parsed
+        response = call_llm_openai(prompt)
+        return _parse_eval_json(response)
     except Exception:
-        return _fallback_eval("Evaluation unavailable")
+        return _fallback_eval("Evaluation unavailable (LLM error).")
