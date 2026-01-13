@@ -87,6 +87,17 @@ export async function uploadReviewDoc(reviewId, file) {
   });
 }
 
+export async function submitReview({ file, context }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("context_json", JSON.stringify(context));
+  return request("/reviews/submit", {
+    method: "POST",
+    body: formData,
+    isMultipart: true,
+  });
+}
+
 export async function startReview(reviewId) {
   return request(`/reviews/${reviewId}/start`, { method: "POST" });
 }

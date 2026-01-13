@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { createReview, startReview, uploadReviewDoc } from "../api.js";
+import { submitReview } from "../api.js";
 import {
   isAllowedFileSize,
   isAllowedFileType,
@@ -51,17 +51,17 @@ const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVe
         region,
         vendor_type: vendorType || null,
       };
-      const review = await createReview(contextJson);
-      const reviewId = review.review_id;
-      await uploadReviewDoc(reviewId, file);
-      const started = await startReview(reviewId);
-      const jobId = started.job_id;
+      const response = await submitReview({ file, context: contextJson });
+      const reviewId = response.review_id ?? response.reviewId ?? response.id;
+      const jobId = response.job_id ?? response.jobId;
       if (onStarted) {
         onStarted({ reviewId, jobId });
       }
     } catch (err) {
       if (err && err.status === 415) {
         setError("Unsupported file type. Please upload PDF or DOCX.");
+      } else if (err && err.status === 413) {
+        setError("File too large. Max 25MB.");
       } else if (err && err.status === 409) {
         setError(
           `Review is not in a state that allows upload. ${err.message || ""}`.trim()
