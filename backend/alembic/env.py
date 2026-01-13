@@ -9,7 +9,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.database import Base
-from app.models import review, segment  # noqa: F401
+from app.models import classification, review, segment  # noqa: F401
 
 config = context.config
 

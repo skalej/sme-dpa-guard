@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.domain.errors import InvalidStatusTransition
 from app.domain.status_flow import assert_transition
+from app.models.classification import SegmentClassification
 from app.models.review import Review, ReviewStatus
 from app.models.segment import ReviewSegment
 from app.services.extraction import extract_document
+from app.services.classification import classify_segment
 from app.services.segmentation import segment_document
 from app.storage.minio import get_storage_client
 
@@ -51,6 +53,33 @@ def process_review(review_id: UUID) -> None:
             ]
         )
         db.commit()
+
+        db.execute(
+            delete(SegmentClassification).where(SegmentClassification.review_id == review.id)
+        )
+        db.commit()
+
+        segments = db.execute(
+            select(ReviewSegment).where(ReviewSegment.review_id == review.id).order_by(
+                ReviewSegment.segment_index
+            )
+        ).scalars().all()
+
+        classifications_to_add = []
+        for segment in segments:
+            for result in classify_segment(segment.text):
+                classifications_to_add.append(
+                    SegmentClassification(
+                        review_id=review.id,
+                        segment_id=segment.id,
+                        clause_type=result["clause_type"],
+                        confidence=result["confidence"],
+                        method=result["method"],
+                    )
+                )
+        if classifications_to_add:
+            db.add_all(classifications_to_add)
+            db.commit()
         # Pipeline steps will be added in later tasks.
     except Exception as exc:
         if review is not None:

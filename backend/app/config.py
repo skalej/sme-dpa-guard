@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     s3_secure: bool = Field(False, validation_alias="S3_SECURE")
     max_file_size_mb: int = Field(25, validation_alias="MAX_FILE_SIZE_MB")
     text_density_threshold: float = Field(0.1, validation_alias="TEXT_DENSITY_THRESHOLD")
+    use_llm_classification: bool = Field(False, validation_alias="USE_LLM_CLASSIFICATION")
+    classify_rules_min_conf: float = Field(0.5, validation_alias="CLASSIFY_RULES_MIN_CONF")
+    classify_top_k: int = Field(3, validation_alias="CLASSIFY_TOP_K")
 
     model_config = SettingsConfigDict(
         env_file=".env",

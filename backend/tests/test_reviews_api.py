@@ -33,7 +33,9 @@ def _apply_migrations() -> None:
 def _clean_reviews() -> None:
     engine = create_engine(DATABASE_URL, future=True)
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE review_segments, reviews"))
+        connection.execute(
+            text("TRUNCATE TABLE segment_classifications, review_segments, reviews")
+        )
 
 
 
