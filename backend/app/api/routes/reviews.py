@@ -1,14 +1,16 @@
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.domain.errors import InvalidStatusTransition
+from app.domain.status_flow import assert_transition
 from app.models.review import Review, ReviewStatus
 from app.schemas.reviews import ReviewCreate, ReviewDoc, ReviewOut, ReviewUploadOut
 from app.services.uploads import UnsupportedFileType, upload_review_document
+from app.workers.tasks import process_review
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -91,3 +93,30 @@ def upload_review_file(
         storage_key=updated.doc_storage_key,
     )
     return ReviewUploadOut(review_id=updated.id, status=updated.status, doc=doc)
+
+
+@router.post("/{review_id}/start")
+def start_processing(
+    review_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> dict:
+    review = db.get(Review, review_id)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if review.status != ReviewStatus.UPLOADED:
+        raise HTTPException(status_code=409, detail="Review not ready for processing")
+
+    assert_transition(review.status, ReviewStatus.PROCESSING)
+    review.status = ReviewStatus.PROCESSING
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    background_tasks.add_task(process_review, review_id)
+
+    return {
+        "message": "Processing started",
+        "review_id": str(review.id),
+        "status": review.status.value,
+    }

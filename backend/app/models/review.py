@@ -34,6 +34,7 @@ class Review(Base):
     doc_size_bytes: Mapped[int | None] = mapped_column(nullable=True)
     doc_sha256: Mapped[str | None] = mapped_column(nullable=True)
     doc_storage_key: Mapped[str | None] = mapped_column(nullable=True)
+    error_message: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
