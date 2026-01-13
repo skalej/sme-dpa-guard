@@ -69,6 +69,15 @@ def get_review(review_id: UUID, db: Session = Depends(get_db)) -> ReviewOut:
 
 @router.get("/{review_id}/explain", response_model=ReviewExplainOut)
 def explain_review(review_id: UUID, db: Session = Depends(get_db)) -> ReviewExplainOut:
+    return _build_explain_payload(review_id, db)
+
+
+@router.get("/{review_id}/results", response_model=ReviewExplainOut)
+def results_review(review_id: UUID, db: Session = Depends(get_db)) -> ReviewExplainOut:
+    return _build_explain_payload(review_id, db)
+
+
+def _build_explain_payload(review_id: UUID, db: Session) -> ReviewExplainOut:
     review = db.get(Review, review_id)
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")

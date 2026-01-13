@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -129,6 +129,23 @@ def process_review(review_id: UUID) -> None:
         if evaluations:
             db.add_all(evaluations)
             db.commit()
+
+        if review.status == ReviewStatus.PROCESSING:
+            actual = db.execute(
+                select(func.count(ClauseEvaluation.id)).where(
+                    ClauseEvaluation.review_id == review.id
+                )
+            ).scalar_one()
+            expected = len(ClauseType)
+            if actual == expected:
+                assert_transition(review.status, ReviewStatus.COMPLETED)
+                review.status = ReviewStatus.COMPLETED
+                db.add(review)
+                db.commit()
+            else:
+                review.error_message = f"Incomplete evaluations: {actual}/{expected}"
+                db.add(review)
+                db.commit()
         # Pipeline steps will be added in later tasks.
     except Exception as exc:
         if review is not None:
