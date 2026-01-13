@@ -1,3 +1,3 @@
-from app.schemas.reviews import ReviewCreate, ReviewOut, ReviewStatus
+from app.schemas.reviews import ReviewCreate, ReviewDoc, ReviewOut, ReviewStatus, ReviewUploadOut
 
-__all__ = ["ReviewCreate", "ReviewOut", "ReviewStatus"]
+__all__ = ["ReviewCreate", "ReviewDoc", "ReviewOut", "ReviewStatus", "ReviewUploadOut"]

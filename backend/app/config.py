@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     app_env: str = Field("dev", validation_alias="APP_ENV")
     app_name: str = Field("dpa-guard", validation_alias="APP_NAME")
     app_version: str = Field("0.1.0", validation_alias="APP_VERSION")
+    s3_endpoint: str = Field("http://localhost:9000", validation_alias="S3_ENDPOINT")
+    s3_access_key: str = Field("minio", validation_alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field("minio12345", validation_alias="S3_SECRET_KEY")
+    s3_bucket: str = Field("dpa-guard", validation_alias="S3_BUCKET")
+    s3_region: str = Field("us-east-1", validation_alias="S3_REGION")
+    s3_secure: bool = Field(False, validation_alias="S3_SECURE")
 
     model_config = SettingsConfigDict(
         env_file=".env",
