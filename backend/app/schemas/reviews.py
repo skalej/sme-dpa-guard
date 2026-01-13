@@ -1,16 +1,14 @@
 from datetime import datetime
-from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.models.review import ReviewStatus
 
-class ReviewStatus(str, Enum):
-    CREATED = "CREATED"
-    UPLOADED = "UPLOADED"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+
+class ReviewCreate(BaseModel):
+    context_json: dict[str, Any] | None = None
 
 
 class ReviewOut(BaseModel):
@@ -18,3 +16,4 @@ class ReviewOut(BaseModel):
     status: ReviewStatus
     created_at: datetime
     updated_at: datetime
+    context_json: dict[str, Any] | None = None
