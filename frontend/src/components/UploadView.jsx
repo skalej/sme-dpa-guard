@@ -108,7 +108,7 @@ const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVe
             <Dropzone value={file} onChange={setFile} error={error} />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-700">
                 Your Role

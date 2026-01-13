@@ -59,7 +59,7 @@ const Dropzone = ({ value, onChange, error }) => {
   const borderTone = error
     ? "border-red-300 bg-red-50/40"
     : isDragging
-      ? "border-blue-300 bg-blue-50/60"
+      ? "border-blue-400 bg-blue-50"
       : "border-slate-300 bg-white";
 
   return (
@@ -70,12 +70,12 @@ const Dropzone = ({ value, onChange, error }) => {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`w-full rounded-2xl border-2 border-dashed ${borderTone} px-6 py-10 text-center transition focus:outline-none focus:ring-2 focus:ring-blue-200`}
+        className={`w-full h-56 rounded-2xl border-2 border-dashed ${borderTone} bg-white p-8 text-center transition focus:outline-none focus:ring-2 focus:ring-blue-200`}
       >
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+        <div className="flex h-full w-full flex-col items-center justify-center text-center">
           <svg
             viewBox="0 0 24 24"
-            className="h-6 w-6"
+            className="h-14 w-14 text-slate-400"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.6"
@@ -86,12 +86,31 @@ const Dropzone = ({ value, onChange, error }) => {
             <path d="m7 8 5-5 5 5" />
             <path d="M5 21h14" />
           </svg>
+          <div className="mt-4 text-sm">
+            <span className="font-semibold text-blue-600">Choose a file</span>{" "}
+            <span className="text-slate-600">or drag and drop</span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">PDF or DOCX up to 25MB</p>
+          {value ? (
+            <div className="mt-6 inline-flex items-center justify-center gap-3">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6 text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+              </svg>
+              <span className="text-xl font-medium text-emerald-600">
+                {value.name}
+              </span>
+            </div>
+          ) : null}
         </div>
-        <div className="mt-4 text-sm text-slate-600">
-          <span className="font-semibold text-blue-600">Choose a file</span>{" "}
-          or drag and drop
-        </div>
-        <p className="mt-1 text-xs text-slate-500">PDF or DOCX up to 25MB</p>
       </button>
 
       <input
@@ -102,9 +121,7 @@ const Dropzone = ({ value, onChange, error }) => {
         className="hidden"
       />
 
-      {value ? (
-        <p className="text-xs text-slate-600">{value.name}</p>
-      ) : null}
+      {value ? null : null}
     </div>
   );
 };

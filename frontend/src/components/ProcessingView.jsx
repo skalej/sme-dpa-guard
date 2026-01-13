@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { formatApiError, getJob } from "../api.js";
+import { formatApiError, getJob, startReview } from "../api.js";
 
 const ProcessingView = ({
   reviewId,
@@ -12,8 +12,11 @@ const ProcessingView = ({
   const [jobState, setJobState] = useState("PENDING");
   const [errorMessage, setErrorMessage] = useState("");
   const [failureCount, setFailureCount] = useState(0);
-  const failureCountRef = useRef(0);
+  const [isRestarting, setIsRestarting] = useState(false);
+  const [jobFailed, setJobFailed] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [lastJobPayload, setLastJobPayload] = useState(null);
+  const [pollingActive, setPollingActive] = useState(true);
   const intervalRef = useRef(null);
 
   const stopPolling = () => {
@@ -27,39 +30,57 @@ const ProcessingView = ({
     try {
       const response = await getJob(reviewId);
       const nextState = response.state || "PENDING";
+      setLastJobPayload(response);
       setJobState(nextState);
-      failureCountRef.current = 0;
       setFailureCount(0);
       setErrorMessage("");
 
-      if (
-        response.ready === true ||
-        nextState === "SUCCESS" ||
-        nextState === "FAILURE"
-      ) {
+      if (response.ready === true && response.successful === false) {
+        setJobFailed(true);
+        setIsPaused(true);
+        setPollingActive(false);
         stopPolling();
-        if (nextState === "SUCCESS") {
-          window.setTimeout(() => {
-            onCompleted?.({ reviewId });
-          }, 400);
-        } else if (nextState === "FAILURE") {
-          setErrorMessage("Processing failed. Please retry or restart.");
-        }
+        setErrorMessage(
+          response.error || response.detail || "Processing failed."
+        );
+        return;
+      }
+
+      if (nextState === "FAILURE") {
+        setJobFailed(true);
+        setIsPaused(true);
+        setPollingActive(false);
+        stopPolling();
+        setErrorMessage(
+          response.error || response.detail || "Processing failed."
+        );
+        return;
+      }
+
+      if (nextState === "SUCCESS" || response.successful === true) {
+        setPollingActive(false);
+        stopPolling();
+        window.setTimeout(() => {
+          onCompleted?.({ reviewId });
+        }, 400);
+        return;
       }
     } catch (err) {
-      failureCountRef.current += 1;
-      const nextFailures = failureCountRef.current;
-      setFailureCount(nextFailures);
-      if (nextFailures >= 3) {
-        setErrorMessage(formatApiError(err));
-        setIsPaused(true);
-        stopPolling();
-      }
+      setFailureCount((prev) => {
+        const next = prev + 1;
+        if (next >= 3) {
+          setErrorMessage(formatApiError(err));
+          setIsPaused(true);
+          setPollingActive(false);
+          stopPolling();
+        }
+        return next;
+      });
     }
   };
 
   useEffect(() => {
-    if (!reviewId || isPaused) {
+    if (!reviewId || isPaused || !pollingActive) {
       return undefined;
     }
     pollJob();
@@ -70,11 +91,44 @@ const ProcessingView = ({
   }, [reviewId, isPaused, pollIntervalMs]);
 
   const handleRetry = () => {
-    failureCountRef.current = 0;
     setFailureCount(0);
     setErrorMessage("");
     setIsPaused(false);
+    setPollingActive(true);
     pollJob();
+  };
+
+  const handleRestart = async () => {
+    setIsRestarting(true);
+    setErrorMessage("");
+    try {
+      await startReview(reviewId);
+      setJobFailed(false);
+      setFailureCount(0);
+      setIsPaused(false);
+      setPollingActive(true);
+      pollJob();
+    } catch (err) {
+      setErrorMessage(formatApiError(err));
+    } finally {
+      setIsRestarting(false);
+    }
+  };
+
+  const handleCopyDetails = async () => {
+    const payload = {
+      reviewId,
+      jobId,
+      jobState,
+      lastJobPayload,
+      errorMessage,
+    };
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setErrorMessage("Details copied to clipboard.");
+    } catch {
+      setErrorMessage("Unable to copy details.");
+    }
   };
 
   const stepStatuses = useMemo(() => {
@@ -83,7 +137,7 @@ const ProcessingView = ({
     const active = "active";
     const error = "error";
 
-    if (jobState === "FAILURE") {
+    if (jobFailed) {
       return [done, done, error, pending, pending];
     }
     if (jobState === "SUCCESS") {
@@ -116,8 +170,17 @@ const ProcessingView = ({
       </div>
 
       {errorMessage ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          {errorMessage}
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            jobFailed
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}
+        >
+          <div className="font-semibold">
+            {jobFailed ? "Processing failed" : "Connection issue"}
+          </div>
+          <div>{errorMessage}</div>
         </div>
       ) : null}
 
@@ -134,7 +197,7 @@ const ProcessingView = ({
         {jobId ? <span>• Job ID: {jobId}</span> : null}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {onBack ? (
           <button
             type="button"
@@ -144,7 +207,17 @@ const ProcessingView = ({
             Back to upload
           </button>
         ) : null}
-        {(isPaused || jobState === "FAILURE") && (
+        {jobFailed ? (
+          <button
+            type="button"
+            onClick={handleRestart}
+            disabled={isRestarting}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isRestarting ? "Restarting..." : "Restart processing"}
+          </button>
+        ) : null}
+        {!jobFailed && isPaused ? (
           <button
             type="button"
             onClick={handleRetry}
@@ -152,7 +225,14 @@ const ProcessingView = ({
           >
             Retry
           </button>
-        )}
+        ) : null}
+        <button
+          type="button"
+          onClick={handleCopyDetails}
+          className="text-xs font-semibold text-slate-500 underline decoration-slate-300"
+        >
+          Copy details
+        </button>
       </div>
     </div>
   );
