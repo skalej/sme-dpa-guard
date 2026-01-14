@@ -8,10 +8,12 @@ function App() {
   const [step, setStep] = useState("upload");
   const [reviewId, setReviewId] = useState(null);
   const [jobId, setJobId] = useState(null);
+  const [fileName, setFileName] = useState(null);
 
-  const handleStarted = ({ reviewId: nextReviewId, jobId: nextJobId }) => {
+  const handleStarted = ({ reviewId: nextReviewId, jobId: nextJobId, fileName: nextFileName }) => {
     setReviewId(nextReviewId);
     setJobId(nextJobId);
+    setFileName(nextFileName || null);
     setStep("processing");
   };
 
@@ -27,7 +29,13 @@ function App() {
             onBack={() => setStep("upload")}
           />
         )}
-        {step === "results" && <ResultsView />}
+        {step === "results" && (
+          <ResultsView
+            reviewId={reviewId}
+            fileName={fileName}
+            onBack={() => setStep("upload")}
+          />
+        )}
       </div>
     </div>
   )

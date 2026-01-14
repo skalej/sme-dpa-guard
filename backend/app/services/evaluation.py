@@ -50,18 +50,52 @@ def build_eval_prompt(
         {
             "rule_id": rule.get("rule_id"),
             "clause_type": rule.get("clause_type"),
+            "title": rule.get("title"),
             "requirement": rule.get("requirement"),
+            "preferred_position": rule.get("preferred_position"),
+            "fallback_position": rule.get("fallback_position"),
+            "red_flag": rule.get("red_flag"),
             "severity": rule.get("severity"),
-            "keywords": rule.get("keywords"),
+            "mandatory": rule.get("mandatory"),
+            "rationale": rule.get("rationale"),
+            "gdpr_references": rule.get("gdpr_references"),
         }
         for rule in playbook_rules
     ]
     prompt = (
-        "You are a DPA clause evaluator. Return ONLY valid JSON (no markdown) "
-        "with keys: risk_label, short_reason, suggested_change, candidate_quotes, "
-        "triggered_rule_ids. risk_label must be one of GREEN, YELLOW, RED. "
-        "candidate_quotes must be verbatim excerpts from the clause text. "
-        "triggered_rule_ids must be a subset of the provided rule_ids.\n"
+        "You are a DPA clause evaluator. Use ONLY the provided clause text, rules, "
+        "and context JSON. Do not infer facts that are not in the text. Return ONLY "
+        "valid JSON (no markdown). Return exactly the schema keys - no extra keys.\n\n"
+        "JSON schema:\n"
+        "{\n"
+        '  \"risk_label\": \"GREEN|YELLOW|RED\",\n'
+        '  \"short_reason\": \"string (1-2 sentences, <300 chars)\",\n'
+        '  \"suggested_change\": \"string or null (1-2 sentences, <300 chars)\",\n'
+        '  \"candidate_quotes\": [\"verbatim excerpts from the clause text\"],\n'
+        '  \"triggered_rule_ids\": [\"rule_id\"],\n'
+        "}\n\n"
+        "Rubric:\n"
+        "- GREEN: clause fully satisfies mandatory requirements with clear coverage.\n"
+        "- YELLOW: partially satisfies requirements or wording is ambiguous.\n"
+        "- RED: missing mandatory requirements, contradicts rules, or has red_flag.\n"
+        "- If preferred_position is provided and not met, you MUST return YELLOW (even if requirement is met).\n"
+        "- GREEN requires meeting preferred_position when it exists.\n"
+        "- If clause text contains the red_flag concept or explicitly negates the "
+        "obligation, set RED.\n"
+        "- If clause text is empty or clearly unrelated, set YELLOW and explain "
+        "that no relevant clause text was found.\n"
+        "Evidence:\n"
+        "- candidate_quotes must be exact substrings from the clause text.\n"
+        "- Do not use ellipses (...) or brackets. Copy exact text and punctuation.\n"
+        "- Keep each quote 10-80 words.\n"
+        "- If risk_label is YELLOW or RED, include at least 1 quote if relevant text exists.\n"
+        "- If no relevant text exists, keep quotes empty and explain why in short_reason.\n"
+        "Rules:\n"
+        "- triggered_rule_ids must be a subset of provided rule_id values.\n"
+        "- If risk_label is GREEN, suggested_change MUST be null.\n\n"
+        "Example output:\n"
+        "{\"risk_label\":\"YELLOW\",\"short_reason\":\"...\",\"suggested_change\":null,"
+        "\"candidate_quotes\":[\"...\"],\"triggered_rule_ids\":[\"R1\"]}\n\n"
         f"Clause: {clause_type.value}\n"
         f"Context JSON:\n{json.dumps(context or {}, indent=2)}\n"
         f"Playbook rules:\n{json.dumps(rule_fields, indent=2)}\n"
@@ -97,14 +131,18 @@ def _parse_eval_json(payload: str) -> dict:
         "candidate_quotes",
         "triggered_rule_ids",
     }
-    if not required.issubset(data.keys()):
-        raise ValueError("Missing keys")
+    if set(data.keys()) != required:
+        raise ValueError("Invalid keys")
     if data["risk_label"] not in {label.value for label in RiskLabel}:
         raise ValueError("Invalid risk_label")
     if not isinstance(data["short_reason"], str):
         raise ValueError("Invalid short_reason")
-    if not isinstance(data["suggested_change"], str):
+    if data["suggested_change"] is not None and not isinstance(
+        data["suggested_change"], str
+    ):
         raise ValueError("Invalid suggested_change")
+    if data["risk_label"] == RiskLabel.GREEN.value and data["suggested_change"] is not None:
+        raise ValueError("Suggested_change must be null for GREEN")
     if not isinstance(data["candidate_quotes"], list) or not all(
         isinstance(item, str) for item in data["candidate_quotes"]
     ):

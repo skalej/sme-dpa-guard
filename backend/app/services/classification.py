@@ -8,31 +8,40 @@ from app.playbook.rules import get_classification_keywords
 from app.services.openai_retry import retry_with_backoff
 
 FALLBACK_CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
-    ClauseType.ROLES: ["controller", "processor", "sub-processor", "subprocessor"],
-    ClauseType.SUBJECT_DURATION: ["term", "duration", "effective date", "expiry"],
-    ClauseType.PURPOSE_NATURE: ["purpose", "processing", "nature of processing"],
-    ClauseType.DATA_CATEGORIES_SUBJECTS: [
-        "data subjects",
-        "categories of data",
-        "personal data",
-    ],
-    ClauseType.SECURITY_TOMS: [
-        "technical and organizational measures",
-        "organizational measures",
-        "security measures",
-        "encryption",
-    ],
-    ClauseType.SUBPROCESSORS: ["subprocessor", "sub-processor", "subprocessors"],
-    ClauseType.TRANSFERS: ["transfer", "cross-border", "international transfer"],
-    ClauseType.BREACH_NOTIFICATION: ["breach", "security incident", "notification"],
-    ClauseType.DSAR_ASSISTANCE: ["data subject request", "dsar", "assistance"],
-    ClauseType.DELETION_RETURN: ["deletion", "return", "destroy"],
-    ClauseType.AUDIT_RIGHTS: ["audit", "inspection", "records"],
-    ClauseType.CONFIDENTIALITY: ["confidential", "confidentiality"],
-    ClauseType.LIABILITY: ["liability", "indemnity", "damages"],
-    ClauseType.GOVERNING_LAW: ["governing law", "jurisdiction"],
-    ClauseType.ORDER_OF_PRECEDENCE: ["order of precedence", "conflict"],
+    ClauseType.ROLES: ["controller", "processor", "data controller", "data processor", "parties"],
+    ClauseType.SUBJECT_DURATION: ["duration", "term", "subject matter", "period"],
+    ClauseType.PURPOSE_NATURE: ["purpose", "nature of processing", "scope"],
+    ClauseType.DATA_CATEGORIES_SUBJECTS: ["personal data", "data categories", "data subjects", "types of data"],
+    ClauseType.SECURITY_TOMS: ["security", "technical measures", "organizational measures", "encryption", "safeguards"],
+    ClauseType.SUBPROCESSORS: ["subprocessor", "sub-processor", "third party", "affiliates"],
+    ClauseType.TRANSFERS: ["transfer", "international", "third country", "standard contractual clauses", "scc"],
+    ClauseType.BREACH_NOTIFICATION: ["breach", "notification", "security incident", "notify"],
+    ClauseType.DSAR_ASSISTANCE: ["data subject", "rights", "access", "deletion", "rectification", "portability"],
+    ClauseType.DELETION_RETURN: ["deletion", "return", "termination", "destroy"],
+    ClauseType.AUDIT_RIGHTS: ["audit", "inspection", "right to audit", "compliance review"],
+    ClauseType.CONFIDENTIALITY: ["confidential", "confidentiality", "non-disclosure"],
+    ClauseType.LIABILITY: ["liability", "limitation of liability", "indemnity", "damages"],
+    ClauseType.GOVERNING_LAW: ["governing law", "jurisdiction", "applicable law"],
+    ClauseType.ORDER_OF_PRECEDENCE: ["precedence", "conflict", "main agreement", "master service"]
 }
+
+# FALLBACK_CLASSIFICATION_RULES: dict[ClauseType, list[str]] = {
+#     ClauseType.ROLES: ["controller", "processor", "sub-processor", "subprocessor"],
+#     ClauseType.SUBJECT_DURATION: ["term", "duration", "effective date", "expiry"],
+#     ClauseType.PURPOSE_NATURE: ["purpose", "processing", "nature of processing"],
+#     ClauseType.DATA_CATEGORIES_SUBJECTS: ["data subjects","categories of data","personal data"],
+#     ClauseType.SECURITY_TOMS: ["technical and organizational measures", "organizational measures", "security measures", "encryption"],
+#     ClauseType.SUBPROCESSORS: ["subprocessor", "sub-processor", "subprocessors"],
+#     ClauseType.TRANSFERS: ["transfer", "cross-border", "international transfer"],
+#     ClauseType.BREACH_NOTIFICATION: ["breach", "security incident", "notification"],
+#     ClauseType.DSAR_ASSISTANCE: ["data subject request", "dsar", "assistance"],
+#     ClauseType.DELETION_RETURN: ["deletion", "return", "destroy"],
+#     ClauseType.AUDIT_RIGHTS: ["audit", "inspection", "records"],
+#     ClauseType.CONFIDENTIALITY: ["confidential", "confidentiality"],
+#     ClauseType.LIABILITY: ["liability", "indemnity", "damages"],
+#     ClauseType.GOVERNING_LAW: ["governing law", "jurisdiction"],
+#     ClauseType.ORDER_OF_PRECEDENCE: ["order of precedence", "conflict"],
+# }
 
 
 def classify_segment_rules(segment_text: str) -> list[dict]:

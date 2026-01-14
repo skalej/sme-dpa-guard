@@ -30,7 +30,7 @@ class ClauseEvaluationOut(BaseModel):
     clause_type: str
     risk_label: str
     short_reason: str
-    suggested_change: str
+    suggested_change: str | None = None
     triggered_rule_ids: list[str]
     evidence_spans: list[EvidenceSpanOut]
 

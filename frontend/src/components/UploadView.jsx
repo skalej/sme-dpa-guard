@@ -56,7 +56,7 @@ const UploadView = ({ onStarted, defaultRole = "", defaultRegion = "", defaultVe
       const reviewId = response.review_id ?? response.reviewId ?? response.id;
       const jobId = response.job_id ?? response.jobId;
       if (onStarted) {
-        onStarted({ reviewId, jobId });
+        onStarted({ reviewId, jobId, fileName: file?.name || null });
       }
     } catch (err) {
       if (err && err.status === 415) {

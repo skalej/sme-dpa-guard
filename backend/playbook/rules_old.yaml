@@ -1,0 +1,207 @@
+s = {
+    ClauseType.BREACH_NOTIFICATION: [
+        {
+            "rule_id": "DPA-BREACH-01",
+            "clause_type": ClauseType.BREACH_NOTIFICATION,
+            "requirement": "Must specify notification timeline of 24-72 hours",
+            "severity": "High",
+            "preferred_wording": "Processor shall notify Controller of any personal data breach within 24 hours of becoming aware",
+            "rationale": "GDPR Article 33 requires notification within 72 hours to supervisory authority"
+        },
+        {
+            "rule_id": "DPA-BREACH-02",
+            "clause_type": ClauseType.BREACH_NOTIFICATION,
+            "requirement": "Must describe notification procedure and required information",
+            "severity": "Medium",
+            "preferred_wording": "Notification must include nature of breach, affected data categories, and mitigation measures",
+            "rationale": "Controller needs sufficient information to assess breach severity"
+        }
+    ],
+    
+    ClauseType.SUBPROCESSORS: [
+        {
+            "rule_id": "DPA-SUB-01",
+            "clause_type": ClauseType.SUBPROCESSORS,
+            "requirement": "Must provide prior notice of new subprocessors",
+            "severity": "High",
+            "preferred_wording": "Processor shall provide 30 days prior written notice of any new subprocessors",
+            "rationale": "Controller must have opportunity to object to subprocessors"
+        },
+        {
+            "rule_id": "DPA-SUB-02",
+            "clause_type": ClauseType.SUBPROCESSORS,
+            "requirement": "Must include right to object to subprocessors",
+            "severity": "High",
+            "preferred_wording": "Controller may object to new subprocessors on reasonable grounds",
+            "rationale": "GDPR Article 28(2) requires controller approval"
+        }
+    ],
+    
+    ClauseType.DELETION_RETURN: [
+        {
+            "rule_id": "DPA-DEL-01",
+            "clause_type": ClauseType.DELETION_RETURN,
+            "requirement": "Must specify deletion timeline after termination",
+            "severity": "High",
+            "preferred_wording": "Processor shall delete or return all personal data within 30 days of termination",
+            "rationale": "Data should not be retained indefinitely after relationship ends"
+        },
+        {
+            "rule_id": "DPA-DEL-02",
+            "clause_type": ClauseType.DELETION_RETURN,
+            "requirement": "Must provide written certification of deletion",
+            "severity": "Medium",
+            "preferred_wording": "Processor shall provide written certification that all data has been deleted or returned",
+            "rationale": "Controller needs verification of compliance"
+        }
+    ],
+    
+    ClauseType.SECURITY_TOMS: [
+        {
+            "rule_id": "DPA-SEC-01",
+            "clause_type": ClauseType.SECURITY_TOMS,
+            "requirement": "Must describe specific technical and organizational measures",
+            "severity": "High",
+            "preferred_wording": "Including encryption, access controls, and regular security audits",
+            "rationale": "GDPR Article 32 requires appropriate security measures"
+        },
+        {
+            "rule_id": "DPA-SEC-02",
+            "clause_type": ClauseType.SECURITY_TOMS,
+            "requirement": "Must commit to industry-standard security practices",
+            "severity": "Medium",
+            "preferred_wording": "Processor implements security measures consistent with industry best practices",
+            "rationale": "Security should meet current standards"
+        }
+    ],
+    
+    ClauseType.TRANSFERS: [
+        {
+            "rule_id": "DPA-TRANS-01",
+            "clause_type": ClauseType.TRANSFERS,
+            "requirement": "Must specify transfer mechanism for non-EU transfers",
+            "severity": "High",
+            "preferred_wording": "Any transfers outside EEA protected by Standard Contractual Clauses or adequacy decision",
+            "rationale": "GDPR Chapter V requires appropriate safeguards"
+        },
+        {
+            "rule_id": "DPA-TRANS-02",
+            "clause_type": ClauseType.TRANSFERS,
+            "requirement": "Must list countries where data will be processed",
+            "severity": "Medium",
+            "preferred_wording": "Processor shall disclose all countries where personal data may be transferred",
+            "rationale": "Controller needs transparency on data location"
+        }
+    ],
+    
+    ClauseType.AUDIT_RIGHTS: [
+        {
+            "rule_id": "DPA-AUDIT-01",
+            "clause_type": ClauseType.AUDIT_RIGHTS,
+            "requirement": "Must grant controller right to audit compliance",
+            "severity": "Medium",
+            "preferred_wording": "Controller may audit Processor's compliance at least annually",
+            "rationale": "GDPR Article 28(3)(h) requires audit rights"
+        }
+    ],
+    
+    ClauseType.DSAR_ASSISTANCE: [
+        {
+            "rule_id": "DPA-DSAR-01",
+            "clause_type": ClauseType.DSAR_ASSISTANCE,
+            "requirement": "Must commit to assist with data subject rights requests",
+            "severity": "High",
+            "preferred_wording": "Processor shall assist Controller in responding to data subject requests",
+            "rationale": "GDPR Article 28(3)(e) requires processor assistance"
+        }
+    ],
+    
+    ClauseType.ROLES: [
+        {
+            "rule_id": "DPA-ROLE-01",
+            "clause_type": ClauseType.ROLES,
+            "requirement": "Must clearly define Controller and Processor roles",
+            "severity": "High",
+            "preferred_wording": "Customer acts as Controller, Vendor acts as Processor",
+            "rationale": "Clear role definition is essential for compliance"
+        }
+    ],
+    
+    ClauseType.CONFIDENTIALITY: [
+        {
+            "rule_id": "DPA-CONF-01",
+            "clause_type": ClauseType.CONFIDENTIALITY,
+            "requirement": "Must ensure personnel are bound by confidentiality",
+            "severity": "Medium",
+            "preferred_wording": "Processor ensures all personnel are bound by confidentiality obligations",
+            "rationale": "GDPR Article 28(3)(b) requires confidentiality commitments"
+        }
+    ],
+    
+    ClauseType.LIABILITY: [
+        {
+            "rule_id": "DPA-LIAB-01",
+            "clause_type": ClauseType.LIABILITY,
+            "requirement": "Should address liability for data breaches",
+            "severity": "Low",
+            "preferred_wording": "Processor liable for damages caused by breach of DPA obligations",
+            "rationale": "GDPR Article 82 provides for liability"
+        }
+    ],
+    
+    # Default rules for remaining clause types
+    ClauseType.SUBJECT_DURATION: [
+        {
+            "rule_id": "DPA-SUBJ-01",
+            "clause_type": ClauseType.SUBJECT_DURATION,
+            "requirement": "Should describe subject matter and duration of processing",
+            "severity": "Low",
+            "preferred_wording": "Processing shall continue for the term of the main agreement",
+            "rationale": "Provides context for processing activities"
+        }
+    ],
+    
+    ClauseType.PURPOSE_NATURE: [
+        {
+            "rule_id": "DPA-PURP-01",
+            "clause_type": ClauseType.PURPOSE_NATURE,
+            "requirement": "Must specify purpose and nature of processing",
+            "severity": "Medium",
+            "preferred_wording": "Processing limited to purposes specified in main agreement",
+            "rationale": "GDPR requires processing for specified purposes only"
+        }
+    ],
+    
+    ClauseType.DATA_CATEGORIES_SUBJECTS: [
+        {
+            "rule_id": "DPA-DATA-01",
+            "clause_type": ClauseType.DATA_CATEGORIES_SUBJECTS,
+            "requirement": "Should identify data categories and data subjects",
+            "severity": "Medium",
+            "preferred_wording": "Personal data includes customer contact information and usage data",
+            "rationale": "Understanding data scope is important for compliance"
+        }
+    ],
+    
+    ClauseType.GOVERNING_LAW: [
+        {
+            "rule_id": "DPA-LAW-01",
+            "clause_type": ClauseType.GOVERNING_LAW,
+            "requirement": "Should specify governing law and jurisdiction",
+            "severity": "Low",
+            "preferred_wording": "Governed by laws of Controller's jurisdiction",
+            "rationale": "Legal clarity for dispute resolution"
+        }
+    ],
+    
+    ClauseType.ORDER_OF_PRECEDENCE: [
+        {
+            "rule_id": "DPA-PREC-01",
+            "clause_type": ClauseType.ORDER_OF_PRECEDENCE,
+            "requirement": "Should clarify precedence over main service agreement",
+            "severity": "Medium",
+            "preferred_wording": "DPA takes precedence over conflicting terms in main agreement",
+            "rationale": "Ensures DPA protections are not overridden"
+        }
+    ]
+}

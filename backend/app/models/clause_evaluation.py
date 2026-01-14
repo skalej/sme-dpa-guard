@@ -27,7 +27,7 @@ class ClauseEvaluation(Base):
         SAEnum(RiskLabel, name="risk_label", create_type=False), nullable=False
     )
     short_reason: Mapped[str] = mapped_column(nullable=False)
-    suggested_change: Mapped[str] = mapped_column(nullable=False)
+    suggested_change: Mapped[str | None] = mapped_column(nullable=True)
     triggered_rule_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
